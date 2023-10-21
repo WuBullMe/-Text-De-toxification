@@ -1,35 +1,43 @@
 import torch
 import torch.nn as nn
+from torch import optim
 
 from tqdm.autonotebook import tqdm
 
 def train(
+    model,
     train_dataloader, 
     val_dataloader,
-    model, 
-    vocab_tox=None,
-    vocab_detox=None,
     optimizer=None, 
-    criterion=None, 
-    learning_rate=1e-3,
-    epochs=15
+    criterion=None,
+    vocab_tox=None,
+    vocab_detox=None, 
+    lr=1e-3,
+    epochs=15,
+    model_path='model.pt'
 ):
     
     """
         Train the given model
+            :param model: model to train
             :param train_dataloader: dataloader for train
             :param val_dataloader: dataloader for validation
-            :param model: model to train
             :param vocab_tox: vocabulary for toxic text
             :param vocab_detox: vocabulary for translated text
             :param optimzier: optimizer for model,     default = Adam
             :param criterion: loss function for model, default = CrossEntropyLoss
-            :param learding_rate: learning rate for optimizer and criterion, default = 1e-3
+            :param lr: learning rate for optimizer and criterion, default = 1e-3
             :param epochs: number of epochs to train model: defualt = 15
+        
+        return:
+            :loss_train_list: return loss of train through all epochs
+            :loss_val_list: return loss of val though all epochs
     """
     
-    optimizer = optim.Adam(seq2seq_model.parameters(), lr=learning_rate)
-    criterion = nn.CrossEntropyLoss(ignore_index=vocab_tox['<pad>'])
+    if optimizer is None:
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    if criterion is None:
+        criterion = nn.CrossEntropyLoss(ignore_index=vocab_tox['<pad>'])
     
     total = 0
     loss_total = 0
@@ -37,15 +45,15 @@ def train(
     loss_train_list = []
     loss_val_list = []
     for epoch in range(1, epochs + 1):
-        loss_train = train_epoch(epoch, train_dataloader, seq2seq, optimizer, criterion)
-        best, loss_val = val_epoch(epoch, val_dataloader, seq2seq, criterion, best_so_far=best)
+        loss_train = train_epoch(epoch, train_dataloader, model, optimizer, criterion)
+        best, loss_val = val_epoch(epoch, val_dataloader, model, criterion, best_so_far=best, model_path=model_path)
         loss_train_list.append(loss_train)
         loss_val_list.append(loss_val)
     
     return loss_train_list, loss_val_list
 
 
-def train_epoch(epoch, dataloader, seq2seq, optimizer, criterion):
+def train_epoch(epoch, dataloader, model, optimizer, criterion):
 
     total_loss = 0
     total = 0
@@ -56,13 +64,13 @@ def train_epoch(epoch, dataloader, seq2seq, optimizer, criterion):
         leave=True,
     )
     
-    seq2seq.train()
+    model.train()
     for i, batch in loop:
         input, target = batch
 
         optimizer.zero_grad()
         
-        outputs = seq2seq(input, target)
+        outputs = model(input, target)
         loss = criterion(
             outputs.view(-1, outputs.size(-1)),
             target.view(-1)
@@ -78,8 +86,8 @@ def train_epoch(epoch, dataloader, seq2seq, optimizer, criterion):
     return total_loss / total
 
 
-def val_epoch(epoch, dataloader, seq2seq,
-          criterion, best_so_far=0.0, seq2seq_path='seq2seq.pt'):
+def val_epoch(epoch, dataloader, model,
+          criterion, best_so_far=0.0, model_path='model.pt'):
     
     total_loss = 0
     total = 0
@@ -91,11 +99,11 @@ def val_epoch(epoch, dataloader, seq2seq,
     )
     
     with torch.no_grad():
-        seq2seq.eval()
+        model.eval()
         for i, batch in loop:
             input, target = batch
 
-            outputs = seq2seq(input, target)
+            outputs = model(input, target)
             loss = criterion(
                 outputs.view(-1, outputs.size(-1)),
                 target.view(-1)
@@ -107,7 +115,7 @@ def val_epoch(epoch, dataloader, seq2seq,
 
         Loss = total_loss / total
         if Loss < best_so_far:
-            torch.save(seq2seq.state_dict(), seq2seq_path)
+            torch.save(model, model_path)
             return Loss, total_loss / total
 
     return best_so_far, total_loss / total
