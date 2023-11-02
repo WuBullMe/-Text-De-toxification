@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 
 def train(
     model,
@@ -27,7 +27,7 @@ def train(
             :param optimzier: optimizer for model,     default = Adam
             :param criterion: loss function for model, default = CrossEntropyLoss
             :param lr: learning rate for optimizer and criterion, default = 1e-3
-            :param epochs: number of epochs to train model: defualt = 15
+            :param epochs: number of epochs to train model: default = 15
         
         return:
             :loss_train_list: return loss of train through all epochs
@@ -70,10 +70,10 @@ def train_epoch(epoch, dataloader, model, optimizer, criterion):
 
         optimizer.zero_grad()
         
-        outputs = model(input, target)
+        outputs = model(input, target[:, :-1])
         loss = criterion(
-            outputs.view(-1, outputs.size(-1)),
-            target.view(-1)
+            outputs.reshape(-1, outputs.size(-1)),
+            target[:, 1:].reshape(-1)
         )
         loss.backward()
 
@@ -103,10 +103,10 @@ def val_epoch(epoch, dataloader, model,
         for i, batch in loop:
             input, target = batch
 
-            outputs = model(input, target)
+            outputs = model(input, target[:, :-1])
             loss = criterion(
-                outputs.view(-1, outputs.size(-1)),
-                target.view(-1)
+                outputs.reshape(-1, outputs.size(-1)),
+                target[:, 1:].reshape(-1)
             )
 
             total_loss += loss.item() * input.shape[0]
