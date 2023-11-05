@@ -240,3 +240,7 @@ class Decoder(nn.Module):
         
         output = self.out(out)
         return output
+
+
+def get_model(path):
+    return torch.load(path)

@@ -103,3 +103,8 @@ class Decoder(nn.Module):
         output = self.out(output)
         
         return output, hidden
+
+
+def get_seq2seq(path):
+    return torch.load(path)
+    
