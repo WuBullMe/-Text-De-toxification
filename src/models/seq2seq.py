@@ -18,15 +18,10 @@ class Seq2Seq(nn.Module):
         self.decoder = decoder
         
         
-    def forward(self, data, target=None):
+    def forward(self, data, target=None, teacher_force=1.0):
         encoder_outputs, encoder_hidden = self.encoder(data)
-        decoder_outputs = self.decoder(encoder_outputs, encoder_hidden, target)
+        decoder_outputs = self.decoder(encoder_outputs, encoder_hidden, target, teacher_force)
         return decoder_outputs
-    
-    def predict(self, data):
-        """ Implement Beam search """
-        encoder_outputs, encoder_hidden = self.encoder(data)
-        
         
 
 class Encoder(nn.Module):
@@ -37,6 +32,7 @@ class Encoder(nn.Module):
         """
             :param input_size:  number of possible initial words
             :param hidden_size: number of features in the hidden state
+            :param vocab:       vocabulary for input data
             :param dropout_p:   probability for dropout
         """
         super(Encoder, self).__init__()
@@ -63,6 +59,7 @@ class Decoder(nn.Module):
         """
             :param hidden_size:  number of features in the hidden state
             :param output_size:  number of possible result words
+            :param vocab:       vocabulary for input data
             :param dropout_p:    probability for dropout
         """
         super(Decoder, self).__init__()
@@ -71,6 +68,7 @@ class Decoder(nn.Module):
         self.max_length = max_length
         
         self.embedding = nn.Embedding(output_size, embed_size, padding_idx=self.vocab.word2index['<pad>'])
+        self.relu = nn.ReLU()
         self.gru = nn.GRU(embed_size, hidden_size, num_layers=2, dropout=dropout_p, batch_first=True)
         self.out = nn.Linear(hidden_size, output_size)
 
@@ -91,16 +89,16 @@ class Decoder(nn.Module):
             decoder_outputs.append(decoder_output)
             
             if target_tensor is not None and torch.rand(1) < teacher_force:
-                decoder_input = target_tensor[:, i].unsqueeze(1) # Teacher forcing
+                decoder_input = target_tensor[:, i].unsqueeze(1)
             else:
                 _, topi = decoder_output.topk(1)
-                decoder_input = topi.squeeze(-1).detach()  # detach from history as input
+                decoder_input = topi.squeeze(-1).detach()
 
         decoder_outputs = torch.cat(decoder_outputs, dim=1)
         return decoder_outputs
 
     def forward_step(self, data, hidden):
-        output = self.embedding(data)
+        output = self.relu(self.embedding(data))
         output, hidden = self.gru(output, hidden)
         output = self.out(output)
         
