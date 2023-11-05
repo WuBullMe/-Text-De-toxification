@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import nltk
+
+import argparse
 nltk.download('punkt')
 
 
@@ -38,10 +40,8 @@ def evaluateSentence(model, vocab_tox, vocab_detox, sentence):
     print('predicted:  ', output_sentence)
     print('')
         
-
+# Accept model, and the sentence to be detoxified
 def predict(model, sentence):
-    
-    trained_model = torch.load(model)
-    trained_model.eval()
-    evaluateSentence(trained_model, trained_model.encoder.vocab, trained_model.decoder.vocab, sentence)
+    model.eval()
+    evaluateSentence(model, model.encoder.vocab, model.decoder.vocab, sentence)
     
