@@ -2,6 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import sys
+sys.path.append('src/models/')
+sys.path.append('src/data/')
+
+from make_dataset import prepareData, get_dataloader, tensorFromSentence
+#from src.data.make_dataset import prepareData, get_dataloader, tensorFromSentence
 
 class FeedForward(nn.Module):
     """
@@ -242,5 +248,5 @@ class Decoder(nn.Module):
         return output
 
 
-def get_model(path):
-    return torch.load(path)
+def get_transformer():
+    return torch.load("models/transformer.pt")

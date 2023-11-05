@@ -4,24 +4,25 @@ import nltk
 import string
 import contractions
 from spellchecker import SpellChecker
-
-from seq2seq import get_seq2seq
-from attention import get_attention
-from transformer import get_transformer
+from get_model import get_mod
 
 import argparse
-nltk.download('punkt')
+nltk.download('punkt', quiet=True)
 
+# Split sentence
+def getList(sentence):
+    return sentence.split(' ')
 
 # Convert every word in sentence to indexes of vocabulary
 def indexesFromSentence(vocab, sentence):
-    return [vocab.word2index[word] for word in nltk.word_tokenize(sentence.lower())]
+    return [vocab.word2index[word] for word in getList(sentence)]
 
 # Convert every word in sentence to indexes of vocabulary in tensor format
-def tensorFromSentence(vocab, sentence):
-    indexes = indexesFromSentence(vocab, sentence)
-    indexes.append(EOS_token)
+def tensorFromSentence(vocab, sentence, device="cpu"):
+    indexes = [vocab.word2index['<sos>']] + indexesFromSentence(vocab, sentence)
+    indexes.append(vocab.word2index['<eos>'])
     return torch.tensor(indexes, dtype=torch.long, device=device).view(1, -1)
+
 
 def preprocess(sentence):
     spell = SpellChecker(distance=1)
@@ -45,7 +46,7 @@ def preprocess(sentence):
 def evaluate(model, sentence, vocab_tox, vocab_detox):
     with torch.no_grad():
         model.eval()
-        input_tensor = tensorFromSentence(vocab_tox, preprocess(sentence))
+        input_tensor = tensorFromSentence(vocab_tox, preprocess(sentence), device=model.decoder.device)
 
         outputs = model(input_tensor)
 
@@ -54,35 +55,46 @@ def evaluate(model, sentence, vocab_tox, vocab_detox):
 
         words = []
         for idx in ids:
-            if idx.item() == EOS_token:
+            if idx.item() == vocab_detox.word2index['<eos>']:
                 break
             words.append(vocab_detox.index2word[idx.item()])
     return words
 
-def evaluateSentence(model, vocab_tox, vocab_detox, sentence):
+def evaluateTrans(model, sentence, vocab_tox, vocab_detox):
+    with torch.no_grad():
+        model.eval()
+        input_tensor = tensorFromSentence(vocab_tox, sentence, device=model.decoder.device)
+        outputs = model.generate_beam(input_tensor, max_length=model.decoder.max_length)
+
+        ids = outputs.squeeze()
+        
+        words = []
+        for idx in ids:
+            if idx.item() == vocab_detox.word2index['<eos>']:
+                break
+            words.append(vocab_detox.index2word[idx.item()])
+    return words
+
+def evaluateSentence(tp, model, vocab_tox, vocab_detox, sentence):
     print('origin:     ', sentence)
-    output_words = evaluate(model, sentence, vocab_tox, vocab_detox)
+    if tp == 0:
+        output_words = evaluate(model, sentence, vocab_tox, vocab_detox)
+    else:
+        output_words = evaluateTrans(model, sentence, vocab_tox, vocab_detox)
     output_sentence = "".join([" "+i if not i.startswith("'") and not i.startswith("n'") and i not in string.punctuation else i for i in output_words]).strip()
     print('predicted:  ', output_sentence)
     print('')
         
 # Accept model, and the sentence to be detoxified
 def predict(model_path, sentence):
-    if model_path == "transformer":
-        model = get_transformer(model_path)
-    if model_path == "attention":
-        model = get_transformer(model_path)
-    if model_path == "seq2seq":
-        model = get_transformer(model_path)
-    
+    model, tp = get_mod(model_path)
     
     model.eval()
-    evaluateSentence(model, model.encoder.vocab, model.decoder.vocab, sentence)
+    evaluateSentence(tp, model, model.encoder.vocab, model.decoder.vocab, sentence)
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument('--sentence', type=str)
     p.add_argument('--model', type=str)
     args = p.parse_args()
-    print(predict(args.model, args.sentence))
-    
+    predict(args.model, args.sentence)

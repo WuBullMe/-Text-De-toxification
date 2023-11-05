@@ -105,6 +105,6 @@ class Decoder(nn.Module):
         return output, hidden
 
 
-def get_seq2seq(path):
-    return torch.load(path)
+def get_seq2seq():
+    return torch.load("models/seq2seq.pt")
     

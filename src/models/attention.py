@@ -154,5 +154,5 @@ class Decoder(nn.Module):
         
         return output, hidden
 
-def get_attention(path):
-    return torch.load(path)
+def get_attention():
+    return torch.load("model/attention.pt")
