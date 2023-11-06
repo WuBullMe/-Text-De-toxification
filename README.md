@@ -29,6 +29,12 @@ pip install -r requirements.txt
 
 Install all requirements for the model, to avoid any errors. It's recommented to create a new python env before installing all those packages.
 
+## Create python env
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+```
+
 # How to Predict
 ## First go to models and download what model you want
 ```bash
