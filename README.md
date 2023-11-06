@@ -2,9 +2,21 @@
 
 # Text De-toxification
 
-Detoxification is an automatic transformation of a text such that:
-- text becomes non-toxic
-- the content of the text stays the same.
+## Overview
+
+Text detoxification is the process of cleaning and improving the quality of text data, which can be useful for tasks like text analysis, sentiment analysis, and language modeling.
+
+In this repository implemented 3 solution from scratch:
+- Seq2Seq
+- Attention
+- Transformer
+
+More detailed information written in `report` section, and all codes in section `src/models`. 
+
+## Data
+
+We used a dataset published in this [repository](https://github.com/s-nlp/detox) for training and testing our model. The data was preprocessed to remove noise and ensure data quality.
+
 
 # How to use
 ## How to install
